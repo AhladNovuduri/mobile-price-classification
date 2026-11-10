@@ -74,7 +74,7 @@ python -m venv .venv
 # macOS/Linux
 source .venv/bin/activate
 # Windows PowerShell
-.venv\Scripts\Activate.ps1
+.venv\\Scripts\\Activate.ps1
 
 python -m pip install --upgrade pip
 pip install -r requirements.txt
@@ -86,9 +86,9 @@ pip install -e .
 Run from the repository root:
 
 ```bash
-python -m price_range.cli train \
-  --train data/raw/train.csv \
-  --model artifacts/price_range_pipeline.joblib \
+python -m price_range.cli train \\
+  --train data/raw/train.csv \\
+  --model artifacts/price_range_pipeline.joblib \\
   --metrics artifacts/holdout_metrics.json
 ```
 
@@ -97,9 +97,9 @@ python -m price_range.cli train \
 The test file contains an `id` column that is excluded from model features. Predictions retain the identifier and are written to a new output file:
 
 ```bash
-python -m price_range.cli predict \
-  --model artifacts/price_range_pipeline.joblib \
-  --input data/raw/test.csv \
+python -m price_range.cli predict \\
+  --model artifacts/price_range_pipeline.joblib \\
+  --input data/raw/test.csv \\
   --output artifacts/test_predictions.csv
 ```
 
@@ -122,7 +122,7 @@ Or use `make test` where Make is available.
 
 The training target is `price_range` with four equally represented encoded classes (`0`–`3`, 500 rows each). The test set does not include the target. Both supplied files have no missing values or exact duplicate rows. See [Data Dictionary](docs/data_dictionary.md).
 
-**Data provenance:** the files were supplied with this project request. An upstream source, collection protocol, licensing terms, and feature units were not included; this repository does not claim independent verification of those details.
+**Data provenance:** the dataset files are included in this repository. An upstream source, collection protocol, licensing terms, and feature units were not provided; this repository does not claim independent verification of those details.
 
 ## Methodology
 
@@ -138,7 +138,7 @@ The model and validation details are documented in the [Model Card](docs/model_c
 
 ## Notebook
 
-`notebooks/predictor.ipynb` is the original notebook supplied for this task. It is retained as a workfile and has not been rewritten. For a repeatable command-line workflow, use the package under `src/`.
+`notebooks/predictor.ipynb` is the original notebook included in the repository. It is retained as a workfile and has not been rewritten. For a repeatable command-line workflow, use the package under `src/`.
 
 ## Limitations
 
@@ -154,6 +154,6 @@ The random seed, split strategy, model configuration, dependencies, and CLI comm
 
 ## Maintainer
 
-Created as a portfolio-ready machine-learning project for **Ahlad Novuduri**.
+Maintained by **Ahlad Novuduri**.
 
 ---
