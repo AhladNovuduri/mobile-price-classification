@@ -48,3 +48,10 @@ Five-fold stratified cross-validation (shuffled, seed 42) yielded accuracy 0.961
 ## Monitoring recommendations
 
 Before any operational use, obtain authoritative data documentation and target definitions; evaluate on a representative external holdout; compare against nonlinear and ordinal alternatives; inspect calibration and subgroup performance; and monitor input drift and class-level errors.
+
+
+## Additional diagnostics and model comparison
+
+The training CLI now emits a holdout confusion matrix and top-ten permutation importance ranked by decrease in macro-F1. These are diagnostics for the fitted Logistic Regression baseline; permutation importance is model- and sample-specific and must not be interpreted causally.
+
+The `compare` CLI benchmarks Logistic Regression, Random Forest, Extra Trees, and HistGradientBoosting with identical stratified five-fold splits, then tunes a small ExtraTrees parameter grid using macro-F1. The tuned candidate is not automatically substituted for the documented baseline. See [Model Comparison and Tuning](model_comparison.md).
