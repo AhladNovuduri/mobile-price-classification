@@ -5,9 +5,7 @@ import pandas as pd
 import pytest
 
 from price_range.modeling import (
-    build_pipeline,
-    load_inference_data,
-    load_training_data,
+    build_pipeline, load_inference_data, load_training_data,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,4 +47,36 @@ def test_training_target_required(tmp_path):
     path = tmp_path / "bad_train.csv"
     frame.to_csv(path, index=False)
     with pytest.raises(ValueError, match="target column"):
+        load_training_data(path)
+
+
+def test_inference_rejects_infinite_values(tmp_path):
+    frame = pd.read_csv(TEST)
+    frame.loc[0, "battery_power"] = np.inf
+    path = tmp_path / "infinite.csv"
+    frame.to_csv(path, index=False)
+    with pytest.raises(ValueError, match="non-finite"):
+        load_inference_data(path, list(pd.read_csv(TRAIN).drop(columns="price_range").columns))
+
+
+def test_inference_rejects_empty_file(tmp_path):
+    path = tmp_path / "empty.csv"
+    path.write_text("id,battery_power\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="empty"):
+        load_inference_data(path, ["battery_power"])
+
+
+def test_duplicate_headers_are_rejected(tmp_path):
+    path = tmp_path / "duplicate.csv"
+    path.write_text("a,a,price_range\n1,2,0\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="duplicate column"):
+        load_training_data(path)
+
+
+def test_training_rejects_single_class(tmp_path):
+    frame = pd.read_csv(TRAIN)
+    frame["price_range"] = 0
+    path = tmp_path / "single_class.csv"
+    frame.to_csv(path, index=False)
+    with pytest.raises(ValueError, match="at least two classes"):
         load_training_data(path)
