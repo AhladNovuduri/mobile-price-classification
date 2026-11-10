@@ -5,9 +5,7 @@ import pandas as pd
 import pytest
 
 from price_range.modeling import (
-    build_pipeline,
-    load_inference_data,
-    load_training_data,
+    build_pipeline, load_inference_data, load_training_data,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,3 +48,63 @@ def test_training_target_required(tmp_path):
     frame.to_csv(path, index=False)
     with pytest.raises(ValueError, match="target column"):
         load_training_data(path)
+
+
+def test_inference_rejects_infinite_values(tmp_path):
+    frame = pd.read_csv(TEST)
+    frame.loc[0, "battery_power"] = np.inf
+    path = tmp_path / "infinite.csv"
+    frame.to_csv(path, index=False)
+    with pytest.raises(ValueError, match="non-finite"):
+        load_inference_data(path, list(pd.read_csv(TRAIN).drop(columns="price_range").columns))
+
+
+def test_inference_rejects_empty_file(tmp_path):
+    path = tmp_path / "empty.csv"
+    path.write_text("id,battery_power\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="empty"):
+        load_inference_data(path, ["battery_power"])
+
+
+def test_duplicate_headers_are_rejected(tmp_path):
+    path = tmp_path / "duplicate.csv"
+    path.write_text("a,a,price_range\n1,2,0\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="duplicate column"):
+        load_training_data(path)
+
+
+def test_training_rejects_single_class(tmp_path):
+    frame = pd.read_csv(TRAIN)
+    frame["price_range"] = 0
+    path = tmp_path / "single_class.csv"
+    frame.to_csv(path, index=False)
+    with pytest.raises(ValueError, match="at least two classes"):
+        load_training_data(path)
+
+
+def test_prediction_cli_exports_probabilities(tmp_path):
+    from argparse import Namespace
+    import joblib
+    from price_range.cli import predict
+
+    X, y = load_training_data(TRAIN)
+    model = build_pipeline().fit(X, y)
+    model_path = tmp_path / "model.joblib"
+    joblib.dump(model, model_path)
+    predictions_path = tmp_path / "predictions.csv"
+    probabilities_path = tmp_path / "probabilities.csv"
+
+    predict(Namespace(
+        model=str(model_path),
+        input=str(TEST),
+        output=str(predictions_path),
+        probabilities_output=str(probabilities_path),
+    ))
+
+    predictions = pd.read_csv(predictions_path)
+    probabilities = pd.read_csv(probabilities_path)
+    assert predictions.shape == (1000, 2)
+    assert probabilities.shape == (1000, 6)
+    assert probabilities["id"].equals(predictions["id"])
+    probability_columns = [c for c in probabilities if c.startswith("probability_class_")]
+    assert np.allclose(probabilities[probability_columns].sum(axis=1), 1.0)
