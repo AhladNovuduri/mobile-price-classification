@@ -80,3 +80,31 @@ def test_training_rejects_single_class(tmp_path):
     frame.to_csv(path, index=False)
     with pytest.raises(ValueError, match="at least two classes"):
         load_training_data(path)
+
+
+def test_prediction_cli_exports_probabilities(tmp_path):
+    from argparse import Namespace
+    import joblib
+    from price_range.cli import predict
+
+    X, y = load_training_data(TRAIN)
+    model = build_pipeline().fit(X, y)
+    model_path = tmp_path / "model.joblib"
+    joblib.dump(model, model_path)
+    predictions_path = tmp_path / "predictions.csv"
+    probabilities_path = tmp_path / "probabilities.csv"
+
+    predict(Namespace(
+        model=str(model_path),
+        input=str(TEST),
+        output=str(predictions_path),
+        probabilities_output=str(probabilities_path),
+    ))
+
+    predictions = pd.read_csv(predictions_path)
+    probabilities = pd.read_csv(probabilities_path)
+    assert predictions.shape == (1000, 2)
+    assert probabilities.shape == (1000, 6)
+    assert probabilities["id"].equals(predictions["id"])
+    probability_columns = [c for c in probabilities if c.startswith("probability_class_")]
+    assert np.allclose(probabilities[probability_columns].sum(axis=1), 1.0)
