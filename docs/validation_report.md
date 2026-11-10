@@ -77,3 +77,12 @@ pytest
 - No labeled evaluation set was supplied for the 1,000-row test CSV.
 - No tuning, external validation, calibration, fairness analysis, or model comparison is included.
 - The original notebook's ROC section uses a single probability column for a multiclass target. The package evaluation instead computes multiclass ROC-AUC with the explicit one-vs-rest strategy.
+
+
+## Extended diagnostics available in the repository
+
+The reproducible `train` command now also writes a confusion matrix and top-ten permutation-importance summary to the metrics JSON. The matrix is generated from the same stratified holdout split described above; permutation importance is computed on that holdout using macro-F1 as the scoring metric. Exact values are generated at runtime rather than duplicated in this static report.
+
+The `compare` command benchmarks Logistic Regression, Random Forest, Extra Trees, and HistGradientBoosting using the same stratified five-fold protocol, and performs a small ExtraTrees grid search. It writes results to `artifacts/model_comparison.json`. See [Model Comparison and Tuning](model_comparison.md).
+
+The repository also includes input-validation tests and a GitHub Actions matrix for Python 3.10, 3.11, and 3.12. The CI workflow should be observed on GitHub before treating the changes as verified in CI.
