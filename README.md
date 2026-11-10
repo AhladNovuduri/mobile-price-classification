@@ -1,71 +1,45 @@
-<div align="center">
-
 # Mobile Price Range Classification
 
-**A reproducible multiclass machine-learning workflow for classifying mobile devices into price-range categories.**
+A reproducible multiclass machine-learning workflow for classifying mobile devices into four encoded price-range categories.
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-pipeline-F7931E?logo=scikitlearn&logoColor=white)
-![License](https://img.shields.io/badge/License-Not%20Specified-lightgrey)
-![Status](https://img.shields.io/badge/Status-Research%20Baseline-blue)
-
-</div>
-
----
+![CI](https://github.com/AhladNovuduri/mobile-price-classification/actions/workflows/tests.yml/badge.svg)
 
 ## Project overview
 
-This repository contains a complete baseline workflow for predicting a device's encoded `price_range` class from its hardware and connectivity specifications. It includes the supplied train/test CSV files, the original Jupyter workfile, a reusable scikit-learn pipeline, automated tests, and project documentation.
+The repository contains the supplied CSV data, an original notebook, a reusable scikit-learn pipeline, automated tests, evaluation and model-comparison commands, and supporting documentation.
 
-The baseline estimator is **StandardScaler + LogisticRegression**. The pipeline keeps preprocessing and estimation together to reduce train/validation leakage and make inference consistent.
+The documented baseline is **StandardScaler + LogisticRegression**. Preprocessing is fitted inside the pipeline to avoid leakage between training and validation folds.
 
-## Results at a glance
+## Results
 
-A reproducible stratified 70/30 holdout evaluation (random state `42`) on the supplied training file produced:
+The baseline's stratified 70/30 holdout evaluation (random state 42) on the supplied training data reported:
 
 | Metric | Result |
 |---|---:|
-| Holdout accuracy | **0.9600** |
+| Accuracy | **0.9600** |
 | Weighted precision | **0.9603** |
 | Weighted recall | **0.9600** |
 | Weighted F1 | **0.9600** |
 | Macro one-vs-rest ROC-AUC | **0.9986** |
 
-Five-fold stratified cross-validation yielded mean accuracy **0.9610** (standard deviation **0.0030**) and mean macro-F1 **0.9609** (standard deviation **0.0029**).
+Five-fold stratified cross-validation reported accuracy **0.9610 ± 0.0030** and macro-F1 **0.9609 ± 0.0029** (mean ± standard deviation).
 
-These are baseline results on the provided training data, not a score on a hidden benchmark or the unlabeled test set. See [the validation report](docs/validation_report.md) for methodology and caveats.
+These are internal estimates on the supplied labeled data, not performance on the unlabeled test file or an external dataset. See [the validation report](docs/validation_report.md).
 
 ## Repository structure
 
 ```text
-mobile-price-classification/
-├── data/
-│   └── raw/
-│       ├── train.csv
-│       └── test.csv
-├── docs/
-│   ├── data_dictionary.md
-│   ├── model_card.md
-│   └── validation_report.md
-├── notebooks/
-│   └── predictor.ipynb       # Original supplied workfile; preserved unchanged
-├── src/
-│   └── price_range/
-│       ├── __init__.py
-│       ├── modeling.py
-│       └── cli.py
-├── tests/
-│   └── test_pipeline.py
-├── .gitignore
-├── CONTRIBUTING.md
-├── Makefile
-├── pyproject.toml
-└── requirements.txt
+.github/workflows/       # Continuous integration
+data/raw/                # Supplied train.csv and test.csv
+docs/                    # Data dictionary, model card, validation, comparison
+notebooks/               # Original supplied notebook
+src/price_range/         # Reusable modeling, evaluation, and CLI code
+tests/                   # Unit and data-integrity tests
 ```
 
 ## Quick start
-
-### 1. Environment
 
 Python 3.10 or newer is recommended.
 
@@ -77,41 +51,49 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 
 python -m pip install --upgrade pip
-pip install -r requirements.txt
-pip install -e .
+pip install -e ".[dev]"
 ```
 
-### 2. Train and evaluate
-
-Run from the repository root:
+### Train and evaluate the baseline
 
 ```bash
-python -m price_range.cli train \
+price-range train \
   --train data/raw/train.csv \
   --model artifacts/price_range_pipeline.joblib \
   --metrics artifacts/holdout_metrics.json
 ```
 
-### 3. Generate predictions
+The training report includes holdout metrics, a confusion matrix, a per-class classification report, top-ten permutation importance, and five-fold cross-validation. Generated files are written to `artifacts/`, which is ignored by Git.
 
-The test file contains an `id` column that is excluded from model features. Predictions retain the identifier and are written to a new output file:
+### Compare and tune candidate models
 
 ```bash
-python -m price_range.cli predict \
-  --model artifacts/price_range_pipeline.joblib \
-  --input data/raw/test.csv \
-  --output artifacts/test_predictions.csv
+price-range compare \
+  --train data/raw/train.csv \
+  --output artifacts/model_comparison.json
 ```
 
-The CLI does not overwrite the supplied CSV files. Use a new output path.
+This benchmarks Logistic Regression, Random Forest, Extra Trees, and HistGradientBoosting with the same stratified folds, then performs a small ExtraTrees grid search. See [Model Comparison](docs/model_comparison.md).
 
-### 4. Run quality checks
+### Predict labels and optional probabilities
+
+```bash
+price-range predict \
+  --model artifacts/price_range_pipeline.joblib \
+  --input data/raw/test.csv \
+  --output artifacts/test_predictions.csv \
+  --probabilities-output artifacts/test_probabilities.csv
+```
+
+The test file's `id` column is retained in outputs and excluded from model features. The supplied input files are never overwritten.
+
+### Run tests
 
 ```bash
 pytest
 ```
 
-Or use `make test` where Make is available.
+GitHub Actions runs the same suite on Python 3.10, 3.11, and 3.12 for pushes and pull requests.
 
 ## Data
 
@@ -120,40 +102,37 @@ Or use `make test` where Make is available.
 | `data/raw/train.csv` | 2,000 | 21 | Features plus target |
 | `data/raw/test.csv` | 1,000 | 21 | Identifier plus features |
 
-The training target is `price_range` with four equally represented encoded classes (`0`–`3`, 500 rows each). The test set does not include the target. Both supplied files have no missing values or exact duplicate rows. See [Data Dictionary](docs/data_dictionary.md).
+The training target has four encoded classes (0–3), with 500 rows per class. The test set has no target labels. The supplied data has no missing values or exact duplicate rows. Feature descriptions and limitations are in the [data dictionary](docs/data_dictionary.md).
 
-**Data provenance:** the files were supplied with this project request. An upstream source, collection protocol, licensing terms, and feature units were not included; this repository does not claim independent verification of those details.
+**Provenance:** the files were supplied with this project; no upstream source, collection protocol, feature-unit definitions, or data license accompanied them.
 
-## Methodology
+## Methodology and safeguards
 
-1. Validate the training/test schema and basic data integrity.
-2. Separate the target (`price_range`) from the 20 predictors.
-3. Split the labeled data with a stratified 70/30 holdout and fixed seed.
-4. Fit `StandardScaler` and `LogisticRegression` in one scikit-learn `Pipeline`.
-5. Report accuracy, weighted precision/recall/F1, macro one-vs-rest ROC-AUC, and a per-class classification report.
-6. Use stratified five-fold cross-validation as a stability check.
-7. Refit on the full labeled dataset before generating test-set predictions.
-
-The model and validation details are documented in the [Model Card](docs/model_card.md) and [Validation Report](docs/validation_report.md).
-
-## Notebook
-
-`notebooks/predictor.ipynb` is the original notebook supplied for this task. It is retained as a workfile and has not been rewritten. For a repeatable command-line workflow, use the package under `src/`.
+1. Validate CSV headers, target, feature schema, numeric types, missing values, and finite values.
+2. Split labeled data using stratified sampling and a fixed random seed.
+3. Fit preprocessing and the estimator together in a scikit-learn pipeline.
+4. Report class-level metrics and confusion matrix alongside aggregate scores.
+5. Use stratified cross-validation for stability checks and identical folds for candidate comparisons.
+6. Refit the documented baseline on all labeled rows before inference.
 
 ## Limitations
 
-- The reported evaluation is an internal holdout and cross-validation estimate; no external test labels are available.
-- The target classes are treated as nominal multiclass labels by Logistic Regression. Their numeric ordering is not explicitly modeled.
-- No hyperparameter search or model comparison is claimed.
-- Feature units and dataset provenance are not documented in the supplied files.
-- The baseline is not a production deployment or a pricing recommendation system.
+- No labels are available for the 1,000-row test file, so its predictive performance cannot be measured.
+- The encoded class boundaries and currency thresholds are unknown.
+- Feature units, source population, and collection date are undocumented.
+- Cross-validation and holdout results are internal estimates, not external validation.
+- Permutation importance is a model-specific diagnostic, not causal evidence.
+- No fairness, temporal, external, or drift evaluation has been performed.
+- This is an educational/portfolio baseline, not a production pricing or valuation system.
 
-## Reproducibility
+## Project documentation
 
-The random seed, split strategy, model configuration, dependencies, and CLI commands are explicit. The original input assets are preserved under `data/raw/`; generated artifacts are written to `artifacts/`, which is excluded from version control by default.
+- [Data dictionary](docs/data_dictionary.md)
+- [Model card](docs/model_card.md)
+- [Validation report](docs/validation_report.md)
+- [Model comparison and tuning](docs/model_comparison.md)
+- [CI workflow notes](.github/workflows/README.md)
 
-## Maintainer
+## License
 
-Created as a portfolio-ready machine-learning project for **Ahlad Novuduri**.
-
----
+No license was supplied with the project. Reuse permissions are therefore not specified; add a license only after choosing the terms you want to grant.
